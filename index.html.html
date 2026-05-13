@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Monitor de NFs Embaladas — Infinit</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1b2a;min-height:100vh;color:#e0e8f0}
+
+/* LOGIN */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;background:#0d1b2a}
+.login-card{background:#112233;border:1px solid #1e3a5a;border-radius:14px;padding:2rem;width:100%;max-width:360px}
+.login-logo{width:52px;height:52px;background:#c8a84b;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem}
+.login-logo i{color:#0d1b2a;font-size:26px}
+.login-header{text-align:center;margin-bottom:1.5rem}
+.login-header h1{font-size:17px;font-weight:700;color:#e0e8f0;letter-spacing:.5px}
+.login-header p{font-size:13px;color:#6a8aaa;margin-top:4px}
+.lfield{margin-bottom:1rem}
+.lfield label{display:block;font-size:11px;color:#6a8aaa;margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.lfield input,.lfield select{width:100%;padding:10px 12px;border:1px solid #1e3a5a;border-radius:8px;background:#0d1b2a;color:#e0e8f0;font-size:14px;outline:none}
+.lfield input:focus,.lfield select:focus{border-color:#c8a84b}
+.lfield select option{background:#0d1b2a}
+.btn-login{background:#c8a84b;color:#0d1b2a;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;width:100%;letter-spacing:.3px;transition:background .15s}
+.btn-login:hover{background:#e0c060}
+.login-hint{font-size:11px;color:#4a6a8a;text-align:center;margin-top:1rem}
+.login-hint b{color:#7a9aba}
+.lerr{background:rgba(200,50,50,.15);color:#f08080;border:1px solid rgba(200,50,50,.3);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:1rem}
+.hidden{display:none!important}
+
+/* TOPBAR */
+.topbar{background:#0a1520;border-bottom:1px solid #1e3a5a;padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:50}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.tlogo{width:34px;height:34px;background:#c8a84b;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.tlogo i{color:#0d1b2a;font-size:18px}
+.topbar h2{font-size:14px;font-weight:700;color:#e0e8f0;letter-spacing:.5px;text-transform:uppercase}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.badge-admin{background:rgba(200,168,75,.15);color:#c8a84b;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid rgba(200,168,75,.3)}
+.badge-user{background:rgba(30,90,160,.2);color:#7ab0e0;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid rgba(30,90,160,.3)}
+.btn-logout{background:transparent;border:1px solid #1e3a5a;border-radius:8px;padding:5px 10px;font-size:12px;color:#6a8aaa;cursor:pointer}
+.btn-logout:hover{background:#1e3a5a;color:#e0e8f0}
+
+/* MAIN */
+.main{padding:1.5rem;max-width:1100px;margin:0 auto}
+
+/* STAT CARDS */
+.stats-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:1.25rem}
+@media(max-width:700px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:#112233;border:1px solid #1e3a5a;border-radius:10px;padding:1.1rem;text-align:center;cursor:default}
+.stat-card.active-filter{border-color:#c8a84b}
+.stat-num{font-size:36px;font-weight:800;line-height:1;margin-bottom:6px}
+.stat-num.yellow{color:#c8a84b}
+.stat-num.green{color:#2ecc71}
+.stat-num.orange{color:#e67e22}
+.stat-num.blue{color:#3498db}
+.stat-num.red{color:#e74c3c}
+.stat-lbl{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#4a6a8a}
+
+/* PROGRESSO */
+.progress-wrap{margin-bottom:1.25rem}
+.progress-label{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#6a8aaa;margin-bottom:6px}
+.progress-bar-bg{background:#1e3a5a;border-radius:4px;height:8px;overflow:hidden}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,#2ecc71,#27ae60);border-radius:4px;transition:width .4s}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+.search-box{display:flex;align-items:center;gap:8px;background:#112233;border:1px solid #1e3a5a;border-radius:8px;padding:0 12px;height:38px;min-width:180px;flex:1;max-width:280px}
+.search-box i{color:#4a6a8a;font-size:15px;flex-shrink:0}
+.search-box input{background:none;border:none;outline:none;color:#e0e8f0;font-size:13px;width:100%}
+.search-box input::placeholder{color:#4a6a8a}
+.tbtn{height:38px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;padding:0 14px;display:flex;align-items:center;gap:6px;letter-spacing:.3px;border:none;white-space:nowrap;transition:opacity .15s}
+.tbtn:hover{opacity:.85}
+.tbtn-gold{background:#c8a84b;color:#0d1b2a}
+.tbtn-outline{background:transparent;border:1px solid #1e3a5a;color:#c8a84b}
+.tbtn-outline:hover{background:#1e3a5a}
+.tbtn-danger{background:transparent;border:1px solid #3a1e1e;color:#e74c3c}
+.tbtn-danger:hover{background:#3a1e1e}
+
+/* FILTER PILLS */
+.filter-pills{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
+.pill{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;border:1px solid #1e3a5a;color:#6a8aaa;background:transparent;transition:all .15s;text-transform:uppercase}
+.pill:hover{border-color:#c8a84b;color:#c8a84b}
+.pill.active{border-color:#c8a84b;color:#0d1b2a;background:#c8a84b}
+
+/* TABLE */
+.table-wrap{background:#112233;border:1px solid #1e3a5a;border-radius:10px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+thead{background:#0a1520}
+th{padding:10px 12px;text-align:left;font-weight:700;color:#4a6a8a;font-size:10px;border-bottom:1px solid #1e3a5a;letter-spacing:.8px;text-transform:uppercase}
+td{padding:10px 12px;border-bottom:1px solid #162840;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#0d1f30}
+.nf-num{color:#c8a84b;font-weight:700;font-size:13px}
+.td-client{color:#e0e8f0}
+.td-muted{color:#4a6a8a;font-size:12px}
+
+/* Status select inline */
+.status-sel{border-radius:6px;font-size:12px;font-weight:700;padding:4px 8px;border:1px solid;cursor:pointer;outline:none}
+.status-sel.Pendente{background:rgba(230,126,34,.12);color:#e67e22;border-color:rgba(230,126,34,.3)}
+.status-sel.Embalada{background:rgba(46,204,113,.12);color:#2ecc71;border-color:rgba(46,204,113,.3)}
+.status-sel.Enviada{background:rgba(52,152,219,.12);color:#3498db;border-color:rgba(52,152,219,.3)}
+.status-sel.Problema{background:rgba(231,76,60,.12);color:#e74c3c;border-color:rgba(231,76,60,.3)}
+.status-sel option{background:#112233;color:#e0e8f0}
+
+/* Obs input inline */
+.obs-input{background:#0d1b2a;border:1px solid #1e3a5a;border-radius:6px;color:#e0e8f0;font-size:12px;padding:4px 8px;width:100%;outline:none}
+.obs-input:focus{border-color:#c8a84b}
+
+/* Delete btn */
+.del-btn{background:none;border:none;cursor:pointer;color:#3a2a2a;padding:4px;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:color .15s}
+.del-btn:hover{color:#e74c3c}
+
+.empty{text-align:center;padding:3rem 1rem}
+.empty i{font-size:44px;color:#1e3a5a;margin-bottom:1rem;display:block}
+.empty p{color:#4a6a8a;font-size:14px}
+
+/* MODAL SCANNER */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:200;padding:1rem}
+.mbox{background:#112233;border-radius:14px;border:1px solid #1e3a5a;width:100%;max-width:460px;max-height:90vh;overflow-y:auto}
+.mhead{padding:1rem 1.25rem;border-bottom:1px solid #1e3a5a;display:flex;align-items:center;justify-content:space-between}
+.mhead h3{font-size:14px;font-weight:700;color:#c8a84b;letter-spacing:.5px;text-transform:uppercase}
+.mbody{padding:1.25rem}
+.mfoot{padding:1rem 1.25rem;border-top:1px solid #1e3a5a;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.mfield{margin-bottom:1rem}
+.mfield label{display:block;font-size:11px;color:#6a8aaa;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.mfield input,.mfield select{width:100%;padding:9px 11px;border:1px solid #1e3a5a;border-radius:8px;background:#0d1b2a;color:#e0e8f0;font-size:14px;outline:none}
+.mfield input:focus,.mfield select:focus{border-color:#c8a84b}
+.mfield select option{background:#0d1b2a}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
+.btn-cancel{background:transparent;border:1px solid #1e3a5a;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:#6a8aaa}
+.btn-cancel:hover{background:#1e3a5a;color:#e0e8f0}
+.btn-save{background:#c8a84b;color:#0d1b2a;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer}
+.btn-save:hover{background:#e0c060}
+.abtn{background:none;border:1px solid #1e3a5a;border-radius:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6a8aaa}
+.abtn:hover{background:#1e3a5a}
+
+/* Scanner */
+.scanner-area{border-radius:10px;overflow:hidden;margin-bottom:1rem;background:#000;position:relative;min-height:200px}
+#reader{width:100%}
+#reader video{width:100%!important;border-radius:0!important}
+#reader img{display:none!important}
+.scan-frame{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2}
+.scan-box{width:210px;height:110px;border:2.5px solid #c8a84b;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.5)}
+.scan-status{text-align:center;font-size:13px;color:#6a8aaa;margin-bottom:.75rem;display:flex;align-items:center;justify-content:center;gap:7px}
+.pulse{width:9px;height:9px;background:#c8a84b;border-radius:50%;animation:pulse 1.2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.65)}}
+.nf-preview{background:rgba(200,168,75,.1);border-radius:10px;padding:1rem;margin-bottom:1rem;display:flex;align-items:center;gap:10px;border:1px solid rgba(200,168,75,.3)}
+.nf-preview i{font-size:22px;color:#c8a84b;flex-shrink:0}
+.nf-preview-txt p:first-child{font-weight:700;font-size:15px;color:#c8a84b}
+.nf-preview-txt p:last-child{font-size:12px;color:#6a8aaa;margin-top:2px}
+.manual-sep{display:flex;align-items:center;gap:8px;margin:1rem 0;color:#2a4a6a;font-size:12px}
+.manual-sep::before,.manual-sep::after{content:'';flex:1;border-top:1px solid #1e3a5a}
+.manual-input{display:flex;gap:8px}
+.manual-input input{flex:1;font-size:13px;height:36px;padding:0 10px;border:1px solid #1e3a5a;border-radius:8px;background:#0d1b2a;color:#e0e8f0;outline:none}
+.manual-input input:focus{border-color:#c8a84b}
+.btn-manual{background:#1e3a5a;border:none;border-radius:8px;padding:0 12px;font-size:12px;cursor:pointer;color:#c8a84b;white-space:nowrap;height:36px;font-weight:700}
+.btn-manual:hover{background:#2a4a6a}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="view-login">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo"><i class="ti ti-barcode"></i></div>
+      <h1>Monitor de NFs Embaladas</h1>
+      <p>Infinit — Rastreamento de embalagens</p>
+    </div>
+    <div id="lerr" class="lerr hidden"></div>
+    <div class="lfield"><label>Usuário</label><input id="lu" placeholder="seu usuário" autocomplete="username"/></div>
+    <div class="lfield"><label>Senha</label><input type="password" id="lp" placeholder="sua senha" autocomplete="current-password"/></div>
+    <div class="lfield"><label>Perfil</label>
+      <select id="lr">
+        <option value="admin">Administrador</option>
+        <option value="user">Usuário</option>
+      </select>
+    </div>
+    <button class="btn-login" onclick="doLogin()">ENTRAR</button>
+    <p class="login-hint">Admin: <b>vitor / admin123</b> &nbsp;|&nbsp; Usuário: <b>user / 1234</b></p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="view-app" class="hidden">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="tlogo"><i class="ti ti-barcode"></i></div>
+      <h2>Monitor de NFs Embaladas</h2>
+    </div>
+    <div class="topbar-right">
+      <span id="rbadge"></span>
+      <span id="uname" style="font-size:12px;color:#6a8aaa"></span>
+      <button class="btn-logout" onclick="doLogout()"><i class="ti ti-logout"></i> Sair</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- STATS -->
+    <div class="stats-row" id="srow"></div>
+
+    <!-- PROGRESS -->
+    <div class="progress-wrap">
+      <div class="progress-label" id="prog-label">PROGRESSO DE EMBALAGEM — 0%</div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-bar" style="width:0%"></div></div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="search-box"><i class="ti ti-search"></i><input type="text" id="snf" placeholder="Buscar NF, cliente..." oninput="renderTable()"/></div>
+      <button class="tbtn tbtn-gold" onclick="openScanner()"><i class="ti ti-barcode"></i> + ADICIONAR NF</button>
+      <button class="tbtn tbtn-outline" onclick="exportCSV()"><i class="ti ti-download"></i> EXPORTAR CSV</button>
+      <button class="tbtn tbtn-danger" onclick="limparTudo()"><i class="ti ti-trash"></i> LIMPAR TUDO</button>
+    </div>
+
+    <!-- FILTER PILLS -->
+    <div class="filter-pills">
+      <button class="pill active" data-f="" onclick="setFilter(this,'')">TODOS</button>
+      <button class="pill" data-f="Pendente" onclick="setFilter(this,'Pendente')">PENDENTE</button>
+      <button class="pill" data-f="Embalada" onclick="setFilter(this,'Embalada')">EMBALADA</button>
+      <button class="pill" data-f="Enviada" onclick="setFilter(this,'Enviada')">ENVIADA</button>
+      <button class="pill" data-f="Problema" onclick="setFilter(this,'Problema')">PROBLEMA</button>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:100px">Nº NF ↕</th>
+          <th style="width:200px">Cliente ↕</th>
+          <th style="width:110px">CPF/CNPJ</th>
+          <th style="width:80px">Volumes</th>
+          <th style="width:100px">Data ↕</th>
+          <th style="width:120px">Status ↕</th>
+          <th>Observação</th>
+          <th style="width:60px">Ações</th>
+        </tr></thead>
+        <tbody id="tb-main"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SCANNER -->
+<div class="overlay hidden" id="m-scanner">
+  <div class="mbox">
+    <div class="mhead">
+      <h3><i class="ti ti-barcode"></i> Escanear NF</h3>
+      <button class="abtn" onclick="closeScanner()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mbody">
+      <div id="scan-phase-camera">
+        <div class="scanner-area">
+          <div id="reader"></div>
+          <div class="scan-frame"><div class="scan-box"></div></div>
+        </div>
+        <div class="scan-status" id="scan-status-txt"><div class="pulse"></div> Aguardando código de barras ou QR code...</div>
+        <div class="manual-sep">ou informe manualmente</div>
+        <div class="manual-input">
+          <input type="text" id="manual-nf" placeholder="Digite o número da NF"/>
+          <button class="btn-manual" onclick="useManual()">USAR</button>
+        </div>
+      </div>
+
+      <div id="scan-phase-form" class="hidden">
+        <div class="nf-preview">
+          <i class="ti ti-file-check"></i>
+          <div class="nf-preview-txt">
+            <p id="scanned-nf-label">—</p>
+            <p>Código capturado — preencha os dados abaixo</p>
+          </div>
+        </div>
+        <div class="frow">
+          <div class="mfield" style="margin:0"><label>Cliente</label><input type="text" id="f-cliente" placeholder="Nome do cliente"/></div>
+          <div class="mfield" style="margin:0"><label>CPF/CNPJ</label><input type="text" id="f-cpf" placeholder="-"/></div>
+        </div>
+        <div class="frow" style="margin-top:1rem">
+          <div class="mfield" style="margin:0"><label>Volumes</label><input type="number" id="f-vol" placeholder="0" min="0"/></div>
+          <div class="mfield" style="margin:0"><label>Status inicial</label>
+            <select id="f-status">
+              <option value="Pendente">Pendente</option>
+              <option value="Embalada">Embalada</option>
+              <option value="Enviada">Enviada</option>
+              <option value="Problema">Problema</option>
+            </select>
+          </div>
+        </div>
+        <div class="mfield" style="margin-top:1rem"><label>Observação</label><input type="text" id="f-obs" placeholder="opcional..."/></div>
+      </div>
+    </div>
+    <div class="mfoot" id="scanner-footer">
+      <button class="btn-cancel" onclick="closeScanner()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+const USERS=[
+  {name:'Vitor',username:'vitor',password:'admin123',role:'admin'},
+  {name:'André',username:'andre',password:'1234',role:'user'},
+  {name:'Beth',username:'beth',password:'1234',role:'user'},
+  {name:'Daniel',username:'daniel',password:'1234',role:'user'},
+  {name:'Laura',username:'laura',password:'1234',role:'user'},
+  {name:'Hellen',username:'hellen',password:'1234',role:'user'},
+  {name:'user',username:'user',password:'1234',role:'user'}
+];
+
+let CU=null,qr=null,scannedCode=null,filterStatus='';
+let NFS=[];
+
+function now(){
+  const d=new Date();
+  return d.toLocaleDateString('pt-BR');
+}
+
+function doLogin(){
+  const u=document.getElementById('lu').value.trim();
+  const p=document.getElementById('lp').value.trim();
+  const r=document.getElementById('lr').value;
+  const f=USERS.find(x=>x.username===u&&x.password===p&&x.role===r);
+  if(!f){const e=document.getElementById('lerr');e.textContent='Usuário, senha ou perfil incorretos.';e.classList.remove('hidden');return;}
+  CU=f;
+  document.getElementById('view-login').classList.add('hidden');
+  document.getElementById('view-app').classList.remove('hidden');
+  document.getElementById('rbadge').innerHTML=CU.role==='admin'
+    ?'<span class="badge-admin"><i class="ti ti-shield-check"></i> Admin</span>'
+    :'<span class="badge-user"><i class="ti ti-user"></i> Usuário</span>';
+  document.getElementById('uname').textContent=CU.name;
+  render();
+}
+
+function doLogout(){
+  CU=null;
+  document.getElementById('view-app').classList.add('hidden');
+  document.getElementById('view-login').classList.remove('hidden');
+  document.getElementById('lerr').classList.add('hidden');
+}
+
+function setFilter(el,f){
+  filterStatus=f;
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+function renderStats(){
+  const tot=NFS.length;
+  const emb=NFS.filter(x=>x.status==='Embalada').length;
+  const pend=NFS.filter(x=>x.status==='Pendente').length;
+  const env=NFS.filter(x=>x.status==='Enviada').length;
+  const prob=NFS.filter(x=>x.status==='Problema').length;
+  const pct=tot>0?Math.round(((emb+env)/tot)*100):0;
+
+  document.getElementById('srow').innerHTML=`
+    <div class="stat-card"><div class="stat-num yellow">${tot}</div><div class="stat-lbl">Total NFs</div></div>
+    <div class="stat-card"><div class="stat-num green">${emb}</div><div class="stat-lbl">Embaladas</div></div>
+    <div class="stat-card"><div class="stat-num orange">${pend}</div><div class="stat-lbl">Pendentes</div></div>
+    <div class="stat-card"><div class="stat-num blue">${env}</div><div class="stat-lbl">Enviadas</div></div>
+    <div class="stat-card"><div class="stat-num red">${prob}</div><div class="stat-lbl">Problemas</div></div>
+  `;
+  document.getElementById('prog-label').textContent=`PROGRESSO DE EMBALAGEM — ${pct}%`;
+  document.getElementById('prog-bar').style.width=pct+'%';
+}
+
+function renderTable(){
+  const q=(document.getElementById('snf').value||'').toLowerCase();
+  const list=NFS.filter(x=>{
+    const mq=!q||(x.nf+x.cliente+x.cpf).toLowerCase().includes(q);
+    const ms=!filterStatus||x.status===filterStatus;
+    return mq&&ms;
+  });
+  const isA=CU&&CU.role==='admin';
+  const tb=document.getElementById('tb-main');
+  if(!list.length){
+    tb.innerHTML=`<tr><td colspan="8"><div class="empty"><i class="ti ti-inbox"></i><p>Nenhuma NF registrada</p></div></td></tr>`;
+    return;
+  }
+  tb.innerHTML=list.map(n=>`<tr>
+    <td class="nf-num">${n.nf}</td>
+    <td class="td-client">${n.cliente}</td>
+    <td class="td-muted">${n.cpf||'-'}</td>
+    <td class="td-muted">${n.volumes}</td>
+    <td class="td-muted">${n.data}</td>
+    <td>
+      <select class="status-sel ${n.status.replace(' ','-')}" onchange="changeStatus(${n.id},this)">
+        <option value="Pendente" ${n.status==='Pendente'?'selected':''}>Pendente</option>
+        <option value="Embalada" ${n.status==='Embalada'?'selected':''}>Embalada</option>
+        <option value="Enviada" ${n.status==='Enviada'?'selected':''}>Enviada</option>
+        <option value="Problema" ${n.status==='Problema'?'selected':''}>Problema</option>
+      </select>
+    </td>
+    <td><input class="obs-input" value="${n.obs||''}" placeholder="..." onchange="changeObs(${n.id},this.value)"/></td>
+    <td>${isA||n.createdBy===CU.name?`<button class="del-btn" onclick="delNF(${n.id})" title="Remover"><i class="ti ti-x" style="font-size:18px"></i></button>`:'—'}</td>
+  </tr>`).join('');
+
+  // restyle selects
+  document.querySelectorAll('.status-sel').forEach(s=>{
+    s.className='status-sel '+s.value.replace(' ','-');
+  });
+}
+
+function changeStatus(id,sel){
+  const n=NFS.find(x=>x.id===id);
+  if(!n)return;
+  n.status=sel.value;
+  sel.className='status-sel '+sel.value.replace(' ','-');
+  renderStats();
+}
+
+function changeObs(id,val){
+  const n=NFS.find(x=>x.id===id);
+  if(n)n.obs=val;
+}
+
+function delNF(id){
+  if(!confirm('Remover esta NF?'))return;
+  NFS=NFS.filter(x=>x.id!==id);
+  render();
+}
+
+function limparTudo(){
+  if(!confirm('Limpar todas as NFs? Esta ação não pode ser desfeita.'))return;
+  NFS=[];
+  render();
+}
+
+function exportCSV(){
+  if(!NFS.length){alert('Nenhuma NF para exportar.');return;}
+  const h='Nº NF,Cliente,CPF/CNPJ,Volumes,Data,Status,Observação,Registrado por';
+  const rows=NFS.map(n=>[n.nf,n.cliente,n.cpf||'-',n.volumes,n.data,n.status,n.obs||'',n.createdBy].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(','));
+  const csv='\uFEFF'+h+'\n'+rows.join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='nfs_embaladas_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+function render(){renderStats();renderTable();}
+
+/* SCANNER */
+function openScanner(){
+  scannedCode=null;
+  document.getElementById('scan-phase-camera').classList.remove('hidden');
+  document.getElementById('scan-phase-form').classList.add('hidden');
+  document.getElementById('scanner-footer').innerHTML='<button class="btn-cancel" onclick="closeScanner()">Cancelar</button>';
+  document.getElementById('scan-status-txt').innerHTML='<div class="pulse"></div> Aguardando código de barras ou QR code...';
+  document.getElementById('manual-nf').value='';
+  document.getElementById('m-scanner').classList.remove('hidden');
+  setTimeout(startQR,300);
+}
+
+function startQR(){
+  if(qr)return;
+  qr=new Html5Qrcode('reader');
+  qr.start(
+    {facingMode:'environment'},
+    {fps:10,qrbox:{width:220,height:100},aspectRatio:1.6},
+    onScan,
+    ()=>{}
+  ).catch(()=>{
+    document.getElementById('scan-status-txt').innerHTML='<i class="ti ti-alert-triangle"></i> Câmera não disponível — use o campo manual abaixo.';
+  });
+}
+
+function stopQR(){
+  if(qr){try{qr.stop();}catch(e){}try{qr.clear();}catch(e){}qr=null;}
+}
+
+function onScan(code){
+  stopQR();
+  scannedCode=code.trim();
+  document.getElementById('scan-phase-camera').classList.add('hidden');
+  document.getElementById('scan-phase-form').classList.remove('hidden');
+  document.getElementById('scanned-nf-label').textContent=scannedCode;
+  document.getElementById('f-cliente').value='';
+  document.getElementById('f-cpf').value='';
+  document.getElementById('f-vol').value='1';
+  document.getElementById('f-obs').value='';
+  document.getElementById('f-status').value='Embalada';
+  document.getElementById('scanner-footer').innerHTML=`
+    <button class="btn-cancel" onclick="resetScanner()"><i class="ti ti-refresh"></i> Escanear outro</button>
+    <button class="btn-cancel" onclick="closeScanner()">Cancelar</button>
+    <button class="btn-save" onclick="saveScanned()">REGISTRAR NF</button>
+  `;
+}
+
+function useManual(){
+  const v=document.getElementById('manual-nf').value.trim();
+  if(!v){alert('Digite o número da NF.');return;}
+  stopQR();
+  onScan(v);
+}
+
+function resetScanner(){
+  scannedCode=null;
+  document.getElementById('scan-phase-camera').classList.remove('hidden');
+  document.getElementById('scan-phase-form').classList.add('hidden');
+  document.getElementById('scanner-footer').innerHTML='<button class="btn-cancel" onclick="closeScanner()">Cancelar</button>';
+  document.getElementById('manual-nf').value='';
+  document.getElementById('scan-status-txt').innerHTML='<div class="pulse"></div> Aguardando código de barras ou QR code...';
+  setTimeout(startQR,200);
+}
+
+function closeScanner(){
+  stopQR();
+  document.getElementById('m-scanner').classList.add('hidden');
+}
+
+function saveScanned(){
+  const cliente=document.getElementById('f-cliente').value.trim();
+  if(!cliente){alert('Informe o nome do cliente.');return;}
+  const cpf=document.getElementById('f-cpf').value.trim();
+  const vol=parseInt(document.getElementById('f-vol').value)||1;
+  const obs=document.getElementById('f-obs').value.trim();
+  const status=document.getElementById('f-status').value;
+  const newId=NFS.length?Math.max(...NFS.map(x=>x.id))+1:1;
+  NFS.unshift({id:newId,nf:scannedCode,cliente,cpf,volumes:vol,obs,status,data:now(),createdBy:CU.name});
+  closeScanner();
+  render();
+}
+</script>
+</body>
+</html>
