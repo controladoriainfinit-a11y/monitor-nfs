@@ -250,15 +250,26 @@ tr:hover td{background:#0d1f30}
     </div>
     <div class="mbody">
       <div id="scan-phase-camera">
-        <div class="scanner-area">
-          <div id="reader"></div>
-          <div class="scan-frame"><div class="scan-box"></div></div>
+        <!-- Manual input FIRST and prominent -->
+        <div style="margin-bottom:1rem">
+          <p style="font-size:11px;color:#6a8aaa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Número da NF</p>
+          <div class="manual-input">
+            <input type="text" id="manual-nf" placeholder="Digite ou escaneie o número da NF" style="font-size:16px" inputmode="numeric"/>
+            <button class="btn-manual" onclick="useManual()">BUSCAR</button>
+          </div>
+          <p style="font-size:11px;color:#4a6a8a;margin-top:6px">💡 Se importou o CSV, o nome e CPF preenchem automaticamente</p>
         </div>
-        <div class="scan-status" id="scan-status-txt"><div class="pulse"></div> Aguardando código de barras ou QR code...</div>
-        <div class="manual-sep">ou informe manualmente</div>
-        <div class="manual-input">
-          <input type="text" id="manual-nf" placeholder="Digite o número da NF"/>
-          <button class="btn-manual" onclick="useManual()">USAR</button>
+        <div class="manual-sep">ou use a câmera</div>
+        <!-- Camera toggle -->
+        <div id="camera-toggle-wrap">
+          <button class="btn-manual" style="width:100%;height:38px;font-size:13px" onclick="toggleCamera()"><i class="ti ti-camera"></i> Ativar câmera para escanear</button>
+        </div>
+        <div id="camera-wrap" style="display:none">
+          <div class="scanner-area" style="margin-top:.75rem">
+            <div id="reader"></div>
+            <div class="scan-frame"><div class="scan-box"></div></div>
+          </div>
+          <div class="scan-status" id="scan-status-txt"><div class="pulse"></div> Aguardando código de barras...</div>
         </div>
       </div>
 
@@ -446,59 +457,45 @@ function importCSV(input){
   const reader = new FileReader();
   reader.onload = function(e){
     let text = e.target.result;
-    // Remove BOM
-    text = text.replace(/^\uFEFF/, '');
+    text = text.replace(/^\uFEFF/, ''); // remove BOM
     const lines = text.split(/\r?\n/).filter(l=>l.trim());
     if(lines.length < 2){ alert('Arquivo inválido.'); return; }
-    
-    // Detect delimiter
+
     const delim = lines[0].includes(';') ? ';' : ',';
-    
-    // Parse header - strip quotes and BOM
-    const header = lines[0].split(delim).map(h=>h.replace(/[\uFEFF"'\s]/g,'').toLowerCase());
-    
-    console.log('Header encontrado:', header.join(' | '));
-    
-    // Find column indexes
-    const idx = {
-      num:  header.findIndex(h=>h==='num_nf'),
-      nome: header.findIndex(h=>h==='dest_nome'),
-      doc:  header.findIndex(h=>h==='dest_doc' && !h.includes('tipo')),
-      mun:  header.findIndex(h=>h==='dest_municipio'),
-      uf:   header.findIndex(h=>h==='dest_uf'),
-      val:  header.findIndex(h=>h==='vnf'),
-      dt:   header.findIndex(h=>h==='dt_emissao'),
-    };
-    
-    // Fix: dest_doc_tipo and dest_doc may confuse findIndex
-    // Find dest_doc specifically (exact match, not dest_doc_tipo)
-    idx.doc = header.findIndex(h=>h==='dest_doc');
-    
-    console.log('Colunas:', JSON.stringify(idx));
-    
-    let count = 0;
+    const header = lines[0].split(delim).map(h=>h.replace(/[\uFEFF"']/g,'').trim().toLowerCase());
+
+    const iNum  = header.indexOf('num_nf');
+    const iNome = header.indexOf('dest_nome');
+    const iDoc  = header.indexOf('dest_doc');
+    const iMun  = header.indexOf('dest_municipio');
+    const iUf   = header.indexOf('dest_uf');
+    const iVal  = header.indexOf('vnf');
+
+    if(iNum < 0){ alert('Coluna num_nf não encontrada. Verifique o arquivo.'); return; }
+
+    // Reset NFDB completely on each import
+    Object.keys(NFDB).forEach(k => delete NFDB[k]);
+
+    const seen = new Set();
     for(let i=1;i<lines.length;i++){
-      // Split respecting quotes
       const cols = lines[i].split(delim).map(c=>c.replace(/^["']+|["']+$/g,'').trim());
-      const num = idx.num>=0 ? cols[idx.num] : '';
-      if(!num || NFDB[num]) continue;
+      const num = cols[iNum] ? cols[iNum].trim() : '';
+      if(!num || seen.has(num)) continue;
+      seen.add(num);
       NFDB[num] = {
-        nome: idx.nome>=0 ? cols[idx.nome] : '',
-        cpf:  idx.doc>=0  ? cols[idx.doc]  : '',
-        municipio: idx.mun>=0 ? cols[idx.mun] : '',
-        uf:   idx.uf>=0   ? cols[idx.uf]   : '',
-        valor: idx.val>=0 ? cols[idx.val]  : '',
-        dt:   idx.dt>=0   ? (cols[idx.dt]||'').slice(0,10) : '',
+        nome:      iNome>=0 ? cols[iNome] : '',
+        cpf:       iDoc>=0  ? cols[iDoc]  : '',
+        municipio: iMun>=0  ? cols[iMun]  : '',
+        uf:        iUf>=0   ? cols[iUf]   : '',
+        valor:     iVal>=0  ? cols[iVal]  : '',
       };
-      count++;
     }
-    
-    input.value='';
-    
-    // Debug: show first NF loaded
-    const primeiros = Object.entries(NFDB).slice(0,2);
-    const debug = primeiros.map(([k,v])=>`NF ${k}: ${v.nome} | CPF: ${v.cpf}`).join('\n');
-    alert(`✅ ${count} NFs carregadas!\n\nVerificação:\n${debug}`);
+
+    input.value = '';
+    const total = Object.keys(NFDB).length;
+    const amostra = Object.entries(NFDB).slice(0,3)
+      .map(([k,v])=>`NF ${k}: ${v.nome} | CPF: ${v.cpf}`).join('\n');
+    alert(`✅ ${total} NFs carregadas com sucesso!\n\nAmostra:\n${amostra}`);
   };
   reader.readAsText(file, 'UTF-8');
 }
@@ -570,8 +567,16 @@ function onScan(code){
   document.getElementById('scan-phase-camera').classList.add('hidden');
   document.getElementById('scan-phase-form').classList.remove('hidden');
   document.getElementById('scanned-nf-label').textContent=scannedCode;
-  // Auto-fill from imported CSV database
-  const dbEntry = NFDB[scannedCode] || NFDB[scannedCode.replace(/^0+/,'')] || null;
+  // Extrair num_nf da chave de acesso NF-e (44 dígitos) ou usar direto
+  let lookupKey = scannedCode;
+  if(/^\d{44}$/.test(scannedCode)){
+    // Chave NF-e: posições 25-34 = nNF (9 dígitos), remover zeros à esquerda
+    lookupKey = String(parseInt(scannedCode.substring(25, 34), 10));
+  }
+  const dbEntry = NFDB[lookupKey] || NFDB[lookupKey.replace(/^0+/,'')] || null;
+  
+  // Mostrar número amigável no preview (não a chave inteira)
+  scannedCode = lookupKey;
   document.getElementById('f-cliente').value = dbEntry ? dbEntry.nome : '';
   document.getElementById('f-cpf').value = dbEntry ? dbEntry.cpf : '';
   document.getElementById('f-vol').value='1';
@@ -592,6 +597,20 @@ function onScan(code){
   `;
 }
 
+function toggleCamera(){
+  const wrap = document.getElementById('camera-wrap');
+  const btn = document.querySelector('#camera-toggle-wrap button');
+  if(wrap.style.display==='none'){
+    wrap.style.display='block';
+    btn.innerHTML='<i class="ti ti-camera-off"></i> Desativar câmera';
+    startCamera();
+  } else {
+    wrap.style.display='none';
+    btn.innerHTML='<i class="ti ti-camera"></i> Ativar câmera para escanear';
+    stopCamera();
+  }
+}
+
 function useManual(){
   const v=document.getElementById('manual-nf').value.trim();
   if(!v){alert('Digite o número da NF.');return;}
@@ -605,8 +624,10 @@ function resetScanner(){
   document.getElementById('scan-phase-form').classList.add('hidden');
   document.getElementById('scanner-footer').innerHTML='<button class="btn-cancel" onclick="closeScanner()">Cancelar</button>';
   document.getElementById('manual-nf').value='';
-  document.getElementById('scan-status-txt').innerHTML='<div class="pulse"></div> Aguardando código de barras ou QR code...';
-  setTimeout(startCamera,200);
+  const camWrap=document.getElementById('camera-wrap');
+  if(camWrap) camWrap.style.display='none';
+  const btn=document.querySelector('#camera-toggle-wrap button');
+  if(btn) btn.innerHTML='<i class="ti ti-camera"></i> Ativar câmera para escanear';
 }
 
 function closeScanner(){
