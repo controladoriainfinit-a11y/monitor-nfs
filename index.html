@@ -228,7 +228,7 @@ tr:hover td{background:#0d1f30}
         <thead><tr>
           <th style="width:100px">Nº NF ↕</th>
           <th style="width:200px">Cliente ↕</th>
-          <th style="width:110px">CPF/CNPJ</th>
+          <th style="width:130px">Rastreio</th>
           <th style="width:80px">Volumes</th>
           <th style="width:100px">Data ↕</th>
           <th style="width:120px">Status ↕</th>
@@ -278,16 +278,15 @@ tr:hover td{background:#0d1f30}
           <i class="ti ti-file-check"></i>
           <div class="nf-preview-txt">
             <p id="scanned-nf-label">—</p>
-            <p>Código capturado — preencha os dados abaixo</p>
+            <p>Código capturado — confira os dados abaixo</p>
           </div>
         </div>
+        <div class="mfield"><label>Cliente <span style="color:#e74c3c">*</span></label><input type="text" id="f-cliente" placeholder="Nome do cliente" required/></div>
+        <div class="mfield"><label>Rastreio</label><input type="text" id="f-rastreio" placeholder="Código de rastreio (opcional)"/></div>
+        <div class="mfield"><label>Nº NF <span style="color:#e74c3c">*</span></label><input type="text" id="f-nf-num" placeholder="Número da NF" required/></div>
         <div class="frow">
-          <div class="mfield" style="margin:0"><label>Cliente</label><input type="text" id="f-cliente" placeholder="Nome do cliente"/></div>
-          <div class="mfield" style="margin:0"><label>CPF/CNPJ</label><input type="text" id="f-cpf" placeholder="-"/></div>
-        </div>
-        <div class="frow" style="margin-top:1rem">
-          <div class="mfield" style="margin:0"><label>Volumes</label><input type="number" id="f-vol" placeholder="0" min="0"/></div>
-          <div class="mfield" style="margin:0"><label>Status inicial</label>
+          <div class="mfield" style="margin:0"><label>Volumes <span style="color:#e74c3c">*</span></label><input type="number" id="f-vol" placeholder="0" min="0" required/></div>
+          <div class="mfield" style="margin:0"><label>Status <span style="color:#e74c3c">*</span></label>
             <select id="f-status">
               <option value="Pendente">Pendente</option>
               <option value="Embalada">Embalada</option>
@@ -296,7 +295,7 @@ tr:hover td{background:#0d1f30}
             </select>
           </div>
         </div>
-        <div class="mfield" style="margin-top:1rem"><label>Observação</label><input type="text" id="f-obs" placeholder="opcional..."/></div>
+        <div class="mfield" style="margin-top:.5rem"><label>Observação</label><input type="text" id="f-obs" placeholder="opcional..."/></div>
       </div>
     </div>
     <div class="mfoot" id="scanner-footer">
@@ -578,10 +577,11 @@ function onScan(code){
   // Mostrar número amigável no preview (não a chave inteira)
   scannedCode = lookupKey;
   document.getElementById('f-cliente').value = dbEntry ? dbEntry.nome : '';
-  document.getElementById('f-cpf').value = dbEntry ? dbEntry.cpf : '';
-  document.getElementById('f-vol').value='1';
-  document.getElementById('f-obs').value='';
-  document.getElementById('f-status').value='Embalada';
+  document.getElementById('f-nf-num').value = lookupKey || scannedCode;
+  document.getElementById('f-vol').value = '1';
+  document.getElementById('f-rastreio').value = '';
+  document.getElementById('f-obs').value = '';
+  document.getElementById('f-status').value = 'Embalada';
   
   // Show match indicator
   const preview = document.getElementById('scanned-nf-label');
@@ -636,14 +636,19 @@ function closeScanner(){
 }
 
 function saveScanned(){
-  const cliente=document.getElementById('f-cliente').value.trim();
-  if(!cliente){alert('Informe o nome do cliente.');return;}
-  const cpf=document.getElementById('f-cpf').value.trim();
-  const vol=parseInt(document.getElementById('f-vol').value)||1;
-  const obs=document.getElementById('f-obs').value.trim();
-  const status=document.getElementById('f-status').value;
-  const newId=NFS.length?Math.max(...NFS.map(x=>x.id))+1:1;
-  NFS.unshift({id:newId,nf:scannedCode,cliente,cpf,volumes:vol,obs,status,data:now(),createdBy:CU.name});
+  const cliente = document.getElementById('f-cliente').value.trim();
+  const nfNum   = document.getElementById('f-nf-num').value.trim();
+  const vol     = parseInt(document.getElementById('f-vol').value)||0;
+  const rastreio= document.getElementById('f-rastreio').value.trim();
+  const obs     = document.getElementById('f-obs').value.trim();
+  const status  = document.getElementById('f-status').value;
+
+  if(!cliente){ alert('Informe o nome do cliente.'); return; }
+  if(!nfNum)  { alert('Informe o número da NF.');    return; }
+  if(!vol)    { alert('Informe a quantidade de volumes.'); return; }
+
+  const newId = NFS.length ? Math.max(...NFS.map(x=>x.id))+1 : 1;
+  NFS.unshift({id:newId, nf:nfNum, cliente, cpf: rastreio, volumes:vol, obs, status, data:now(), createdBy:CU.name});
   closeScanner();
   render();
 }
