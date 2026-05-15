@@ -445,44 +445,60 @@ function importCSV(input){
   if(!file) return;
   const reader = new FileReader();
   reader.onload = function(e){
-    const text = e.target.result;
+    let text = e.target.result;
+    // Remove BOM
+    text = text.replace(/^\uFEFF/, '');
     const lines = text.split(/\r?\n/).filter(l=>l.trim());
     if(lines.length < 2){ alert('Arquivo inválido.'); return; }
     
     // Detect delimiter
     const delim = lines[0].includes(';') ? ';' : ',';
     
-    // Parse header
-    const header = lines[0].split(delim).map(h=>h.replace(/^[\uFEFF"]+|["]+$/g,'').trim().toLowerCase());
+    // Parse header - strip quotes and BOM
+    const header = lines[0].split(delim).map(h=>h.replace(/[\uFEFF"'\s]/g,'').toLowerCase());
     
+    console.log('Header encontrado:', header.join(' | '));
+    
+    // Find column indexes
     const idx = {
-      num: header.indexOf('num_nf'),
-      nome: header.indexOf('dest_nome'),
-      doc: header.indexOf('dest_doc'),
-      mun: header.indexOf('dest_municipio'),
-      uf: header.indexOf('dest_uf'),
-      val: header.indexOf('vnf'),
-      dt: header.indexOf('dt_emissao'),
+      num:  header.findIndex(h=>h==='num_nf'),
+      nome: header.findIndex(h=>h==='dest_nome'),
+      doc:  header.findIndex(h=>h==='dest_doc' && !h.includes('tipo')),
+      mun:  header.findIndex(h=>h==='dest_municipio'),
+      uf:   header.findIndex(h=>h==='dest_uf'),
+      val:  header.findIndex(h=>h==='vnf'),
+      dt:   header.findIndex(h=>h==='dt_emissao'),
     };
+    
+    // Fix: dest_doc_tipo and dest_doc may confuse findIndex
+    // Find dest_doc specifically (exact match, not dest_doc_tipo)
+    idx.doc = header.findIndex(h=>h==='dest_doc');
+    
+    console.log('Colunas:', JSON.stringify(idx));
     
     let count = 0;
     for(let i=1;i<lines.length;i++){
-      const cols = lines[i].split(delim).map(c=>c.replace(/^"+|"+$/g,'').trim());
+      // Split respecting quotes
+      const cols = lines[i].split(delim).map(c=>c.replace(/^["']+|["']+$/g,'').trim());
       const num = idx.num>=0 ? cols[idx.num] : '';
-      if(!num || NFDB[num]) continue; // skip empty or duplicates
+      if(!num || NFDB[num]) continue;
       NFDB[num] = {
         nome: idx.nome>=0 ? cols[idx.nome] : '',
-        cpf: idx.doc>=0 ? cols[idx.doc] : '',
+        cpf:  idx.doc>=0  ? cols[idx.doc]  : '',
         municipio: idx.mun>=0 ? cols[idx.mun] : '',
-        uf: idx.uf>=0 ? cols[idx.uf] : '',
-        valor: idx.val>=0 ? cols[idx.val] : '',
-        dt: idx.dt>=0 ? (cols[idx.dt]||'').slice(0,10) : '',
+        uf:   idx.uf>=0   ? cols[idx.uf]   : '',
+        valor: idx.val>=0 ? cols[idx.val]  : '',
+        dt:   idx.dt>=0   ? (cols[idx.dt]||'').slice(0,10) : '',
       };
       count++;
     }
     
     input.value='';
-    alert(`✅ ${count} NFs carregadas! Agora é só escanear o código.`);
+    
+    // Debug: show first NF loaded
+    const primeiros = Object.entries(NFDB).slice(0,2);
+    const debug = primeiros.map(([k,v])=>`NF ${k}: ${v.nome} | CPF: ${v.cpf}`).join('\n');
+    alert(`✅ ${count} NFs carregadas!\n\nVerificação:\n${debug}`);
   };
   reader.readAsText(file, 'UTF-8');
 }
