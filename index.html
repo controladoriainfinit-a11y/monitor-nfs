@@ -19,13 +19,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1b2a;min-height:1
 .login-header p{font-size:13px;color:#6a8aaa;margin-top:4px}
 .lfield{margin-bottom:1rem}
 .lfield label{display:block;font-size:11px;color:#6a8aaa;margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.lfield input,.lfield select{width:100%;padding:10px 12px;border:1px solid #1e3a5a;border-radius:8px;background:#0d1b2a;color:#e0e8f0;font-size:14px;outline:none}
+.lfield input,.lfield select{width:100%;padding:12px;border:1px solid #1e3a5a;border-radius:8px;background:#0d1b2a;color:#e0e8f0;font-size:16px;outline:none;-webkit-appearance:none;appearance:none}
 .lfield input:focus,.lfield select:focus{border-color:#c8a84b}
 .lfield select option{background:#0d1b2a}
 .btn-login{background:#c8a84b;color:#0d1b2a;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;width:100%;letter-spacing:.3px;transition:background .15s}
 .btn-login:hover{background:#e0c060}
-.login-hint{font-size:11px;color:#4a6a8a;text-align:center;margin-top:1rem}
-.login-hint b{color:#7a9aba}
 .lerr{background:rgba(200,50,50,.15);color:#f08080;border:1px solid rgba(200,50,50,.3);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:1rem}
 .hidden{display:none!important}
 
@@ -124,7 +122,7 @@ tr:hover td{background:#0d1f30}
 .mfoot{padding:1rem 1.25rem;border-top:1px solid #1e3a5a;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .mfield{margin-bottom:1rem}
 .mfield label{display:block;font-size:11px;color:#6a8aaa;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.mfield input,.mfield select{width:100%;padding:9px 11px;border:1px solid #1e3a5a;border-radius:8px;background:#0d1b2a;color:#e0e8f0;font-size:14px;outline:none}
+.mfield input,.mfield select{width:100%;padding:10px 12px;border:1px solid #1e3a5a;border-radius:8px;background:#0d1b2a;color:#e0e8f0;font-size:16px;outline:none;-webkit-appearance:none;appearance:none}
 .mfield input:focus,.mfield select:focus{border-color:#c8a84b}
 .mfield select option{background:#0d1b2a}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
@@ -169,8 +167,8 @@ tr:hover td{background:#0d1f30}
       <p>Infinit — Rastreamento de embalagens</p>
     </div>
     <div id="lerr" class="lerr hidden"></div>
-    <div class="lfield"><label>Usuário</label><input id="lu" placeholder="seu usuário" autocomplete="username"/></div>
-    <div class="lfield"><label>Senha</label><input type="password" id="lp" placeholder="sua senha" autocomplete="current-password"/></div>
+    <div class="lfield"><label>Usuário</label><input id="lu" placeholder="seu usuário" /></div>
+    <div class="lfield"><label>Senha</label><input type="password" id="lp" placeholder="sua senha" /></div>
     <div class="lfield"><label>Perfil</label>
       <select id="lr">
         <option value="admin">Administrador</option>
@@ -178,7 +176,7 @@ tr:hover td{background:#0d1f30}
       </select>
     </div>
     <button class="btn-login" onclick="doLogin()">ENTRAR</button>
-    <p class="login-hint">Admin: <b>vitor / admin123</b> &nbsp;|&nbsp; Usuário: <b>user / 1234</b></p>
+    
   </div>
 </div>
 
@@ -210,6 +208,7 @@ tr:hover td{background:#0d1f30}
     <div class="toolbar">
       <div class="search-box"><i class="ti ti-search"></i><input type="text" id="snf" placeholder="Buscar NF, cliente..." oninput="renderTable()"/></div>
       <button class="tbtn tbtn-gold" onclick="openScanner()"><i class="ti ti-barcode"></i> + ADICIONAR NF</button>
+      <label class="tbtn tbtn-outline" style="cursor:pointer" title="Importar CSV de NFs da Bling/Mandaê"><i class="ti ti-upload"></i> IMPORTAR CSV <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="importCSV(this)"/></label>
       <button class="tbtn tbtn-outline" onclick="exportCSV()"><i class="ti ti-download"></i> EXPORTAR CSV</button>
       <button class="tbtn tbtn-danger" onclick="limparTudo()"><i class="ti ti-trash"></i> LIMPAR TUDO</button>
     </div>
@@ -295,7 +294,6 @@ tr:hover td{background:#0d1f30}
   </div>
 </div>
 
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 const USERS=[
   {name:'Vitor',username:'vitor',password:'admin123',role:'admin'},
@@ -439,7 +437,59 @@ function exportCSV(){
 
 function render(){renderStats();renderTable();}
 
-/* SCANNER */
+/* BASE DE NFs IMPORTADAS DO CSV */
+let NFDB = {}; // num_nf -> {nome, cpf, municipio, uf, valor}
+
+function importCSV(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const text = e.target.result;
+    const lines = text.split(/\r?\n/).filter(l=>l.trim());
+    if(lines.length < 2){ alert('Arquivo inválido.'); return; }
+    
+    // Detect delimiter
+    const delim = lines[0].includes(';') ? ';' : ',';
+    
+    // Parse header
+    const header = lines[0].split(delim).map(h=>h.replace(/^[\uFEFF"]+|["]+$/g,'').trim().toLowerCase());
+    
+    const idx = {
+      num: header.indexOf('num_nf'),
+      nome: header.indexOf('dest_nome'),
+      doc: header.indexOf('dest_doc'),
+      mun: header.indexOf('dest_municipio'),
+      uf: header.indexOf('dest_uf'),
+      val: header.indexOf('vnf'),
+      dt: header.indexOf('dt_emissao'),
+    };
+    
+    let count = 0;
+    for(let i=1;i<lines.length;i++){
+      const cols = lines[i].split(delim).map(c=>c.replace(/^"+|"+$/g,'').trim());
+      const num = idx.num>=0 ? cols[idx.num] : '';
+      if(!num || NFDB[num]) continue; // skip empty or duplicates
+      NFDB[num] = {
+        nome: idx.nome>=0 ? cols[idx.nome] : '',
+        cpf: idx.doc>=0 ? cols[idx.doc] : '',
+        municipio: idx.mun>=0 ? cols[idx.mun] : '',
+        uf: idx.uf>=0 ? cols[idx.uf] : '',
+        valor: idx.val>=0 ? cols[idx.val] : '',
+        dt: idx.dt>=0 ? (cols[idx.dt]||'').slice(0,10) : '',
+      };
+      count++;
+    }
+    
+    input.value='';
+    alert(`✅ ${count} NFs carregadas! Agora é só escanear o código.`);
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+/* SCANNER — usa BarcodeDetector nativo (Android Chrome) + fallback manual */
+let scanStream=null,scanInterval=null;
+
 function openScanner(){
   scannedCode=null;
   document.getElementById('scan-phase-camera').classList.remove('hidden');
@@ -448,37 +498,77 @@ function openScanner(){
   document.getElementById('scan-status-txt').innerHTML='<div class="pulse"></div> Aguardando código de barras ou QR code...';
   document.getElementById('manual-nf').value='';
   document.getElementById('m-scanner').classList.remove('hidden');
-  setTimeout(startQR,300);
+  setTimeout(startCamera,300);
 }
 
-function startQR(){
-  if(qr)return;
-  qr=new Html5Qrcode('reader');
-  qr.start(
-    {facingMode:'environment'},
-    {fps:10,qrbox:{width:220,height:100},aspectRatio:1.6},
-    onScan,
-    ()=>{}
-  ).catch(()=>{
-    document.getElementById('scan-status-txt').innerHTML='<i class="ti ti-alert-triangle"></i> Câmera não disponível — use o campo manual abaixo.';
-  });
+async function startCamera(){
+  const readerEl=document.getElementById('reader');
+  // Build video + canvas elements
+  readerEl.innerHTML='<video id="scan-video" autoplay playsinline muted style="width:100%;display:block;border-radius:0"></video><canvas id="scan-canvas" style="display:none"></canvas>';
+  const video=document.getElementById('scan-video');
+  const canvas=document.getElementById('scan-canvas');
+  const ctx=canvas.getContext('2d');
+
+  try{
+    scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
+    video.srcObject=scanStream;
+    await video.play();
+
+    // Check if BarcodeDetector is available
+    if(!('BarcodeDetector' in window)){
+      document.getElementById('scan-status-txt').innerHTML='<i class="ti ti-alert-triangle"></i> Scanner automático não disponível neste dispositivo — use o campo manual abaixo.';
+      return;
+    }
+
+    const detector=new BarcodeDetector({formats:['code_128','code_39','ean_13','ean_8','qr_code','data_matrix','upc_a','upc_e','itf','codabar']});
+
+    scanInterval=setInterval(async()=>{
+      if(video.readyState<2)return;
+      canvas.width=video.videoWidth;
+      canvas.height=video.videoHeight;
+      ctx.drawImage(video,0,0);
+      try{
+        const codes=await detector.detect(canvas);
+        if(codes&&codes.length>0){
+          clearInterval(scanInterval);scanInterval=null;
+          onScan(codes[0].rawValue);
+        }
+      }catch(e){}
+    },300);
+
+  }catch(err){
+    document.getElementById('scan-status-txt').innerHTML='<i class="ti ti-alert-triangle"></i> Permissão de câmera negada ou não disponível — use o campo manual abaixo.';
+  }
 }
 
-function stopQR(){
-  if(qr){try{qr.stop();}catch(e){}try{qr.clear();}catch(e){}qr=null;}
+function stopCamera(){
+  if(scanInterval){clearInterval(scanInterval);scanInterval=null;}
+  if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}
+  const readerEl=document.getElementById('reader');
+  if(readerEl)readerEl.innerHTML='';
 }
 
 function onScan(code){
-  stopQR();
+  stopCamera();
   scannedCode=code.trim();
   document.getElementById('scan-phase-camera').classList.add('hidden');
   document.getElementById('scan-phase-form').classList.remove('hidden');
   document.getElementById('scanned-nf-label').textContent=scannedCode;
-  document.getElementById('f-cliente').value='';
-  document.getElementById('f-cpf').value='';
+  // Auto-fill from imported CSV database
+  const dbEntry = NFDB[scannedCode] || NFDB[scannedCode.replace(/^0+/,'')] || null;
+  document.getElementById('f-cliente').value = dbEntry ? dbEntry.nome : '';
+  document.getElementById('f-cpf').value = dbEntry ? dbEntry.cpf : '';
   document.getElementById('f-vol').value='1';
   document.getElementById('f-obs').value='';
   document.getElementById('f-status').value='Embalada';
+  
+  // Show match indicator
+  const preview = document.getElementById('scanned-nf-label');
+  if(dbEntry){
+    preview.innerHTML = scannedCode + ' <span style="font-size:11px;background:rgba(46,204,113,.2);color:#2ecc71;border:1px solid rgba(46,204,113,.3);padding:2px 7px;border-radius:10px;margin-left:4px">✓ cliente encontrado</span>';
+  } else {
+    preview.innerHTML = scannedCode + ' <span style="font-size:11px;background:rgba(230,126,34,.15);color:#e67e22;border:1px solid rgba(230,126,34,.3);padding:2px 7px;border-radius:10px;margin-left:4px">preencha manualmente</span>';
+  }
   document.getElementById('scanner-footer').innerHTML=`
     <button class="btn-cancel" onclick="resetScanner()"><i class="ti ti-refresh"></i> Escanear outro</button>
     <button class="btn-cancel" onclick="closeScanner()">Cancelar</button>
@@ -489,7 +579,7 @@ function onScan(code){
 function useManual(){
   const v=document.getElementById('manual-nf').value.trim();
   if(!v){alert('Digite o número da NF.');return;}
-  stopQR();
+  stopCamera();
   onScan(v);
 }
 
@@ -500,11 +590,11 @@ function resetScanner(){
   document.getElementById('scanner-footer').innerHTML='<button class="btn-cancel" onclick="closeScanner()">Cancelar</button>';
   document.getElementById('manual-nf').value='';
   document.getElementById('scan-status-txt').innerHTML='<div class="pulse"></div> Aguardando código de barras ou QR code...';
-  setTimeout(startQR,200);
+  setTimeout(startCamera,200);
 }
 
 function closeScanner(){
-  stopQR();
+  stopCamera();
   document.getElementById('m-scanner').classList.add('hidden');
 }
 
